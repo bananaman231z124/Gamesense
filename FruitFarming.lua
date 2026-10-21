@@ -55,7 +55,6 @@ const Modules = game:GetService("ReplicatedStorage"):WaitForChild("Modules")
 const Packets = require(Modules:WaitForChild("Packets"))
 const ItemData = require(Modules:WaitForChild("ItemData"))
 const ItemIDS = require(Modules:WaitForChild("ItemIDS"))
-const Animations = require(game.ReplicatedStorage.Game.animations)
 const VirtualUser = game:GetService("VirtualUser")
 const Workspace = game:GetService("Workspace")
 const Items = Workspace:WaitForChild("Items")
@@ -84,7 +83,7 @@ local window = LegendUI:CreateWindow({
         },
         {
             Text = "GS OT",
-            CColor = Color3.fromRGB(255,255,255),
+            CColor = Color3.fromRGB(126, 244, 155),
             TextSize = 14,
         },
         {
@@ -3196,24 +3195,59 @@ AutoPlant_Toggle = attach("AutoPlant.Enabled", Auto_Plant:AddToggle({
     end),
 }))
 
+
 AutoHarvest_Toggle = attach("AutoHarvest.Enabled", Auto_Plant:AddToggle({
     Text = "Auto Harvest",
     Callback = bind("AutoHarvest.Enabled", "toggle", false, function(_AutoHarvest: boolean)
         GlobalConfigs.AutoHarvest.Enabled = _AutoHarvest
+
+        if not _AutoHarvest then
+            return
+        end
+
         task.spawn(function()
-            while GlobalConfigs.AutoHarvest.Enabled and _AutoHarvest do
-                task.wait(GlobalConfigs.AutoHarvest.Speed)
-                local ids = functionbank.GetCropsInRange(GlobalConfigs.AutoHarvest.Distance)
-                if #ids == 0 then
-                    continue
-                end
+            while GlobalConfigs.AutoHarvest.Enabled do
+                local ids = functionbank.GetCropsInRange(
+                    GlobalConfigs.AutoHarvest.Distance
+                )
+
                 for _, id in ids do
-                    Packets.Pickup.send(id)
+                    if not GlobalConfigs.AutoHarvest.Enabled then
+                        break
+                    end
+
+                    pcall(function()
+                        Packets.Pickup.send(id)
+                    end)
+
+                    task.wait(0.005)
                 end
+
+                task.wait(math.max(GlobalConfigs.AutoHarvest.Speed, 0.05))
             end
         end)
     end),
 }))
+
+
+-- AutoHarvest_Toggle = attach("AutoHarvest.Enabled", Auto_Plant:AddToggle({
+--     Text = "Auto Harvest",
+--     Callback = bind("AutoHarvest.Enabled", "toggle", false, function(_AutoHarvest: boolean)
+--         GlobalConfigs.AutoHarvest.Enabled = _AutoHarvest
+--         task.spawn(function()
+--             while GlobalConfigs.AutoHarvest.Enabled and _AutoHarvest do
+--                 task.wait(GlobalConfigs.AutoHarvest.Speed)
+--                 local ids = functionbank.GetCropsInRange(GlobalConfigs.AutoHarvest.Distance)
+--                 if #ids == 0 then
+--                     continue
+--                 end
+--                 for _, id in ids do
+--                     Packets.Pickup.send(id)
+--                 end
+--             end
+--         end)
+--     end),
+-- }))
 
 Auto_Plant:AddSeparator("Settings")
 
@@ -3957,17 +3991,3 @@ add_control(Config_Box, { "AddButton" }, {
     Callback = env.GamesenseCleanup,
 })
 
-range = HudBox:AddRangeSlider({
-    Text = "Damage Range",
-    Min = 0,
-    Max = 100,
-    DefaultMin = 20,
-    DefaultMax = 80,
-    Increment = 1,
-    Callback = function(minimum, maximum)
-        print(minimum, maximum)
-    end
-})
-
-minimum, maximum = range:Get()
-range:Set(10, 90)
